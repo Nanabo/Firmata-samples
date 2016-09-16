@@ -18,11 +18,14 @@ nanabo.servos[2].target_angle = 50
 nanabo.move
 sleep(2)
 
+include CoodinateSystem
 loop do
-  puts "angles[1]=?"
-  nanabo.servos[1].target_angle = gets.chomp.to_i
-  puts "angles[2]=?"
-  nanabo.servos[2].target_angle = gets.chomp.to_i
+
+  puts "length=?"
+  length = gets.chomp.to_f
+  puts "elevation_angle=?"
+  angle = gets.chomp.to_i
+  nanabo.set_default_arm(length, angle)
   nanabo.move
   
   angle1 = nanabo.servos[1].current_angle
@@ -34,6 +37,7 @@ loop do
   inc_angle = included_angle(angle1, angle2).round(2)
   rev_angle = revision_angle(angle1, angle2).round(2)
   puts "length=%.2f cm, inc_angle=%.2f DEG, rev_angle=%.2f DEG"%[length, inc_angle, rev_angle]
+  
   sleep(2)
 end
 
