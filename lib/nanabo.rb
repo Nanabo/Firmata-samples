@@ -69,8 +69,13 @@ class Nanabo
   end
   
   def move_count
-    return 1000 / @speed if @same_time
-    return (1000 * max_distance) / (@speed * 45)
+    @speed = [@speed, 0].max
+    if @same_time
+      count = 1000 / @speed 
+    else
+      count = (1000 * max_distance) / (@speed * 45)
+    end
+    return [count, 1].max
   end
 end
 
