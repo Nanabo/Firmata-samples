@@ -21,10 +21,11 @@ sleep(2)
 include CoodinateSystem
 loop do
 
-  puts "angles[1]=?"
-  nanabo.servos[1].target_angle = gets.chomp.to_i
-  puts "angles[2]=?"
-  nanabo.servos[2].target_angle = gets.chomp.to_i
+  puts "x=?"
+  x = gets.chomp.to_f
+  puts "y=?"
+  y = gets.chomp.to_f
+  nanabo.set_default_arm_xy(x, y)
   nanabo.move
   
   angle1 = nanabo.servos[1].current_angle
