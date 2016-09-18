@@ -102,9 +102,9 @@ class Nanabo
     @servos = (2..7).map {|pin| Servo.new(@machine, pin, 0)}
     target_angles = [90, 145, 60, 90, 90, 90]
     @servos.each_with_index {|s,i| s.target_angle = target_angles[i]}
-    @speed = 50         # 動作スピード。下記@same_timeも影響する
-    @pitch_angle = 90   # バキュームのピッチ角
-    @holds_pitch = true # 真：姿勢が変わってもピッチ角を維持する
+    @speed = 50             # 動作スピード。下記@same_timeも影響する
+    @pitch_angle = 90    # バキュームのピッチ角
+    @holds_pitch = true  # 真：姿勢が変わってもピッチ角を維持する
     @same_time = false  # 真：すべての動作を同じ時間で処理する（＝移動量が大きいほど早くなる）
     @vacuum = Vacuum.new(@machine)
   end
@@ -143,6 +143,10 @@ class Nanabo
   
   def target_angles
     @servos.map {|s| s.target_angle}
+  end
+
+  def target_angles=(target_array)
+    @servos.each_with_index {|s,i| s.target_angle = target_array[i]}
   end
   
   def offsets=(array)
