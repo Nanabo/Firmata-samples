@@ -88,7 +88,7 @@ end
 class Nanabo
   include CoodinateSystem
   attr_reader :servos, :vacuum
-  attr_accessor :speed, :same_time
+  attr_accessor :speed, :same_time, :holds_pitch, :pitch_angle
   
   def initialize(serial, params = {})
     @machine = ArduinoFirmata.connect serial
@@ -229,16 +229,23 @@ class Vacuum
     @machine = machine
     @machine.digital_write VALVE_PIN, false
     @machine.digital_write PUMP_PIN, false
+    @is_sucking = false
   end
   
   def suck
     @machine.digital_write VALVE_PIN, false
     @machine.digital_write PUMP_PIN, true
+    @is_sucking = true
   end
   
   def release
     @machine.digital_write VALVE_PIN, true
     @machine.digital_write PUMP_PIN, false
+    @is_sucking = false
+  end
+  
+  def sucking?
+    return @is_sucking
   end
 end
 
