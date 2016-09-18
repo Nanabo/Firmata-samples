@@ -1,0 +1,2 @@
+# Firmata-samples
+ロボットアームnanaboのFirmata/ruby用サンプルです。ArduinoにIDE付属のスケッチサンプルStandardFirmataを書き込んだ上で動作させます。7botライブラリは不要です
