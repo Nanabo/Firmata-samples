@@ -124,6 +124,13 @@ class Nanabo
     set_default_arm(result[0], result[1].round)
   end
   
+  # is_ground_base: ピッチ角が90°で設置する高さをy=0とおく
+  def set_default_arm_xyz(x, y, z, is_ground_base = true)
+    result = translate_system(x, y, false)
+    set_default_arm_xy(result[0], z, true)
+    @servos[0].target_angle = result[1].round.to_i
+  end
+  
   def move
     adjust_pitch if @holds_pitch
     count = move_count
