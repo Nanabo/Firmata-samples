@@ -38,11 +38,11 @@ module CoodinateSystem
   # 逆関数化が著しく面倒なので、線形探索的に求めていくことにする
   def included_angle_from_length(length)
     # 下限は20°
-    return 20 if length < 11.0
     (20..179).each do |angle|
       # 長さを求めるf(x)は増加関数なので、f(x)が求める長さを超えた時点で角度を返す
       return angle if arm_length_impl(angle) >= length
     end
+    return 179
   end
   
   def revision_angle(m1, m2)
@@ -62,9 +62,16 @@ module CoodinateSystem
     INCLUDED_ANGLE_BASE - servo1_angle - inc_angle
   end
   
-  def translate_system(x, y, is_ground_base)
+  def translate_system(x, y, is_ground_base, forbidden_minus_y)
+    y = [0, y].max if forbidden_minus_y
     y -= (HEIGHT_OFFSET - PUMP_HEIGHT) if is_ground_base
-    [sqrt(x**2 + y**2), degree(atan(y/x))]
+    theta = 0
+    if x != 0
+      theta = degree(atan(y/x))
+    else
+      theta = (y > 0) ? 90 : -90
+    end
+    [sqrt(x**2 + y**2), theta]
   end
   
   def arm1_length(angle)
@@ -102,11 +109,12 @@ class Nanabo
     @servos = (2..7).map {|pin| Servo.new(@machine, pin, 0)}
     target_angles = [90, 145, 60, 90, 90, 90]
     @servos.each_with_index {|s,i| s.target_angle = target_angles[i]}
-    @speed = 50             # 動作スピード。下記@same_timeも影響する
+    @speed = 50          # 動作スピード。下記@same_timeも影響する
     @pitch_angle = 90    # バキュームのピッチ角
     @holds_pitch = true  # 真：姿勢が変わってもピッチ角を維持する
-    @same_time = false  # 真：すべての動作を同じ時間で処理する（＝移動量が大きいほど早くなる）
+    @same_time = false   # 真：すべての動作を同じ時間で処理する（＝移動量が大きいほど早くなる）
     @vacuum = Vacuum.new(@machine)
+    @forbidden_minus_z = true
   end
   
   def set_default_arm(length, elevation_angle)
@@ -119,16 +127,15 @@ class Nanabo
   
   # is_ground_base: ピッチ角が90°で設置する高さをy=0とおく
   def set_default_arm_xy(x, y, is_ground_base = true)
-    result = translate_system(x, y, is_ground_base)
-    p "length=%.2f, angle=%d"%[result[0], result[1].round.to_i]
+    result = translate_system(x, y, is_ground_base, @forbidden_minus_z)
     set_default_arm(result[0], result[1].round)
   end
   
   # is_ground_base: ピッチ角が90°で設置する高さをy=0とおく
   def set_default_arm_xyz(x, y, z, is_ground_base = true)
-    result = translate_system(x, y, false)
-    set_default_arm_xy(result[0], z, true)
-    @servos[0].target_angle = result[1].round.to_i
+    result = translate_system(y, x, false, false)
+    set_default_arm_xy(result[0], z, is_ground_base)
+    @servos[0].target_angle = result[1].round.to_i + 90
   end
   
   def move
@@ -164,6 +171,10 @@ class Nanabo
     @servos.map {|s| s.sign}
   end
   
+  def arm_included_angle
+    included_angle(@servos[1].current_angle, @servos[2].current_angle)
+  end
+  
   private
   # 移動の際、最も移動量が大きいサーボの移動量を返す
   def max_distance
@@ -189,8 +200,8 @@ end
 
 # サーボクラス
 class Servo
-  attr_reader :current_angle
-  attr_accessor :target_angle, :offset
+  attr_reader :current_angle, :target_angle
+  attr_accessor :offset
 
   def initialize(machine, pin, target)
     @machine = machine
@@ -219,6 +230,10 @@ class Servo
   
   def to_angle(val)
     return val * 180 / 1024
+  end
+  
+  def target_angle=(val)
+    @target_angle = [[0, val].max, 180].min.to_i
   end
   
   private
