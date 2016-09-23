@@ -1,9 +1,10 @@
-//var electron = require('electron');
 var gamepad = require('gamepad');
 var childProcess = require('child_process');
 
+// rubyのnanabo APIを子プロセスとして呼び出す
 var impl = childProcess.spawn('ruby', ['impl.rb'], { stdio: ['pipe', 'inherit', 'inherit']});
 
+// 各ボタンのバッファクラス
 function Counter(interval, callback) {
   this.interval = interval;
   this.callback = callback;
@@ -19,16 +20,94 @@ Counter.prototype.stop = function(){
   this.id = 0;
 }
 
-var TurnRightCounter = new Counter(400, function(){ impl.stdin.write("TurnRight\n"); });
-var TurnLeftCounter = new Counter(400, function(){ impl.stdin.write("TurnLeft\n"); });
-var ElevateCounter = new Counter(250, function(){ impl.stdin.write("Elevate\n"); });
-var UnelevateCounter = new Counter(250, function(){ impl.stdin.write("Unelevate\n"); });
+// シフトA（△ボタン）、シフトB（□ボタン）が押された場合に十字キーの動作を変えるためのクラス
+function ShiftController(state_num, io) {
+  this.io = io;
+  this.state_num = state_num;
+  this.states = new Array(state_num);
+}
+ShiftController.prototype.shift = function(index) {
+  if(index >= 0 && index <= this.state_num){
+    this.states[index] = 1;
+  }
+}
+ShiftController.prototype.unshift = function(index) {
+  if(index >= 0 && index <= this.state_num){
+    this.states[index] = 0;
+  }
+}
+ShiftController.prototype.state = function() {
+  for(int i=this.state_num-1; i>=0; i++){
+    if(this.states[i] == 1){
+      return Math.pow(2,i);
+    }
+  }
+  return 0;
+}
+ShiftController.prototype.cursor_up = function() {
+  switch(this.state()){
+    case 0:
+      this.io.write("Unelevate\n");
+      break;
+    case 2:
+      this.io.write("PitchDown\n");
+      break;
+  }
+}
+ShiftController.prototype.cursor_down = function() {
+  switch(this.state()){
+    case 0:
+      this.io.write("Elevate\n");
+      break;
+    case 2:
+      this.io.write("PitchUp\n");
+      break;
+  }
+}
+ShiftController.prototype.cursor_left = function() {
+  switch(this.state()){
+    case 0:
+      this.io.write("TurnLeft\n");
+      break;
+    case 1:
+      this.io.write("M3Left\n");
+      break;
+    case 2:
+      this.io.write("M5Left\n");
+      break;
+  }
+}
+ShiftController.prototype.cursor_right = function() {
+  switch(this.state()){
+    case 0:
+      this.io.write("TurnRight\n");
+      break;
+    case 1:
+      this.io.write("M3Right\n");
+      break;
+    case 2:
+      this.io.write("M5Right\n");
+      break;
+  }
+}
+
+// シフト系動作の実実装
+var sc = new ShiftController(2, impl);
+
+// 方向キー動作バッファ
+var CursorUpCounter = new Counter(100, function(){ sc.cursro_up(); });
+var CursorDownCounter = new Counter(100, function(){ sc.cursor_down(); });
+var CursorRightCounter = new Counter(100, function(){ sc.cursor_right(); });
+var CursorLeftCounter = new Counter(100, function(){ sc.cursor_left(); });
+
+// その他キー動作バッファ（△、□を除く）
 var SuckCounter = new Counter(600000, function(){ impl.stdin.write("Suck\n"); });
 var ReleaseCounter = new Counter(600000, function(){ impl.stdin.write("Release\n"); });
-var LengthUpCounter = new Counter(250, function(){ impl.stdin.write("LengthUp\n"); });
-var LengthDownCounter = new Counter(250, function(){ impl.stdin.write("LengthDown\n"); });
+var LengthUpCounter = new Counter(200, function(){ impl.stdin.write("LengthUp\n"); });
+var LengthDownCounter = new Counter(200, function(){ impl.stdin.write("LengthDown\n"); });
 var SpeedUpCounter = new Counter(250, function(){ impl.stdin.write("SpeedUp\n"); });
 var SpeedDownCounter = new Counter(250, function(){ impl.stdin.write("SpeedDown\n"); });
+
 
 var Buttons = [
   null,
@@ -53,25 +132,25 @@ setInterval(gamepad.detectDevices, 1000);
 gamepad.on("move", function(id, axis, value){
   if(axis == 4){
     if(value == 1){
-      ElevateCounter.start();
-      UnelevateCounter.stop();
+      CursorUpCounter.start();
+      CursorDownCounter.stop();
     }else if(value == -1){
-      UnelevateCounter.start();
-      ElevateCounter.stop();
+      CursorDownCounter.start();
+      CursorUpCounter.stop();
     }else{
-      ElevateCounter.stop();
-      UnelevateCounter.stop();
+      CursorUpCounter.stop();
+      CursorDownCounter.stop();
     }
   }else if(axis == 5){
     if(value == -1){
-      TurnLeftCounter.start();
-      TurnRightCounter.stop();
+      CursorLeftCounter.start();
+      CursorRightCounter.stop();
     }else if(value == 1){
-      TurnRightCounter.start();
-      TurnLeftCounter.stop();
+      CursorRightCounter.start();
+      CursorLeftCounter.stop();
     }else{
-      TurnRightCounter.stop();
-      TurnLeftCounter.stop();
+      CursorRightCounter.stop();
+      CursorLeftCounter.stop();
     }
   }
 });
@@ -80,6 +159,12 @@ gamepad.on("up", function(id, num){
   var b = Buttons[num];
   if(b){
     b.stop();
+  }else{
+    if(num == 0){
+      sc.unshift(1);
+    }else if(num == 3){
+      sc.unshift(2);
+    }
   }
 });
 
@@ -87,28 +172,12 @@ gamepad.on("down", function(id, num){
   var b = Buttons[num];
   if(b){
     b.start();
+  }else{
+    if(num == 0){
+      sc.shift(1);
+    }else if(num == 3){
+      sc.shift(2);
+    }
   }
 });
 
-/*
-const app = electron.app;
-
-const BrowserWindow = electron.BrowserWindow;
-
-let mainWindow;
-
-app.on('window-all-closed', function(){
-  if (process.platform != 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('ready', function(){
-  mainWindow = new BrowserWindow({width:800, height: 600});
-  mainWindow.loadURL('file://' + __dirname + '/index.html');
-  
-  mainWindow.on('closed', function() {
-    mainWindow = null;
-  });
-});
-*/
