@@ -2,7 +2,7 @@
 require 'rubygems'
 require 'arduino_firmata'
 
-require_relative 'CoodinateSystem'
+require_relative 'CoordinateSystemProxy'
 require_relative 'Servo'
 require_relative 'Vacuum'
 
@@ -10,7 +10,7 @@ SERVO_COUNT = 6
 
 # Nanaboコントロールクラス
 class Nanabo
-  include CoodinateSystem
+  include CoordinateSystemProxy
   attr_reader :servos, :vacuum
   attr_accessor :speed, :same_time, :holds_pitch, :pitch_angle
   
