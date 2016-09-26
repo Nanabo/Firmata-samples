@@ -37,7 +37,7 @@ ShiftController.prototype.unshift = function(index) {
   }
 }
 ShiftController.prototype.state = function() {
-  for(var i=this.state_num-1; i>=0; i++){
+  for(var i=this.state_num-1; i>=0; i--){
     if(this.states[i] == 1){
       return Math.pow(2,i);
     }
@@ -92,10 +92,10 @@ ShiftController.prototype.cursor_right = function() {
 }
 
 // シフト系動作の実実装
-var sc = new ShiftController(2, impl);
+var sc = new ShiftController(2, impl.stdin);
 
 // 方向キー動作バッファ
-var CursorUpCounter = new Counter(100, function(){ sc.cursro_up(); });
+var CursorUpCounter = new Counter(100, function(){ sc.cursor_up(); });
 var CursorDownCounter = new Counter(100, function(){ sc.cursor_down(); });
 var CursorRightCounter = new Counter(100, function(){ sc.cursor_right(); });
 var CursorLeftCounter = new Counter(100, function(){ sc.cursor_left(); });
@@ -161,9 +161,9 @@ gamepad.on("up", function(id, num){
     b.stop();
   }else{
     if(num == 0){
-      sc.unshift(1);
+      sc.unshift(0);
     }else if(num == 3){
-      sc.unshift(2);
+      sc.unshift(1);
     }
   }
 });
@@ -174,9 +174,9 @@ gamepad.on("down", function(id, num){
     b.start();
   }else{
     if(num == 0){
-      sc.shift(1);
+      sc.shift(0);
     }else if(num == 3){
-      sc.shift(2);
+      sc.shift(1);
     }
   }
 });

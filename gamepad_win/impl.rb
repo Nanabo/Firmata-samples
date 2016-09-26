@@ -24,16 +24,6 @@ class NanaboProxy
     sleep(2)
   end
   
-  def read
-    commands = []
-    loop do
-      str = STDIN.gets
-      break unless str
-      commands << str.chomp
-    end
-    commands
-  end
-  
   def execute(command)
     case command
     when "TurnLeft"
@@ -48,12 +38,12 @@ class NanaboProxy
       a = @elevation_angle
       b = [a+1, 90].min
       @elevation_angle = b
-      @nanabo.set_default_arm(arm_length, elevation_angle.to_i)
+      @nanabo.set_default_arm(@arm_length, @elevation_angle.to_i)
     when "Unelevate"
       a = @elevation_angle
       b = [a-1, -30].max
       @elevation_angle = b
-      @nanabo.set_default_arm(arm_length, elevation_angle.to_i)
+      @nanabo.set_default_arm(@arm_length, @elevation_angle.to_i)
     when "Suck"
       p "start Suck"
       @nanabo.vacuum.suck
@@ -64,12 +54,12 @@ class NanaboProxy
       a = @arm_length
       b = [a+0.33, 30].min
       @arm_length = b
-      @nanabo.set_default_arm(arm_length, elevation_angle.to_i)
+      @nanabo.set_default_arm(@arm_length, @elevation_angle.to_i)
     when "LengthDown"
       a = @arm_length
       b = [a-0.33, 10].max
       @arm_length = b
-      @nanabo.set_default_arm(arm_length, elevation_angle.to_i)
+      @nanabo.set_default_arm(@arm_length, @elevation_angle.to_i)
     when "M3Left"
       a = @nanabo.servos[3].current_angle
       b = [a+1, 180].min
@@ -107,12 +97,11 @@ end
 
 pr = NanaboProxy.new
 pr.initial_move
+p "initial move finished"
 
 loop do
-  commands = pr.read
-  commands.each do |c|
-    pr.execute(c)
-  end
+  command = gets.chomp
+  pr.execute(command)
   pr.move
   sleep(0.01)
 end
