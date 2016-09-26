@@ -37,7 +37,7 @@ ShiftController.prototype.unshift = function(index) {
   }
 }
 ShiftController.prototype.state = function() {
-  for(int i=this.state_num-1; i>=0; i++){
+  for(var i=this.state_num-1; i>=0; i++){
     if(this.states[i] == 1){
       return Math.pow(2,i);
     }

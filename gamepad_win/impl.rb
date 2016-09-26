@@ -109,7 +109,7 @@ pr = NanaboProxy.new
 pr.initial_move
 
 loop do
-  commands = prn.read
+  commands = pr.read
   commands.each do |c|
     pr.execute(c)
   end
