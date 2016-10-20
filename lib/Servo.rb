@@ -19,9 +19,17 @@ class Servo
     (@target_angle + @offset) - @current_angle
   end
   
-  def write_diff(ratio = 1.0)
-    angle = @current_angle + (distance.to_f * ratio.to_f).round
-    @machine.servo_write @pin, angle
+  def get_diff(ratio = 1.0)
+    #p ["A", ratio]
+    angle = @current_angle + (distance.to_f * ratio.to_f)
+    #p ["B", angle]
+    out_max = 2300.0
+    out_min = 700.0
+    return angle * (out_max - out_min) / 180.0 + out_min;
+  end
+  
+  def write_angle(angle)
+    @machine.servo_write @pin, angle.to_i
   end
   
   def update_angle

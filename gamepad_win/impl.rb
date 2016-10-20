@@ -25,6 +25,7 @@ class NanaboProxy
   end
   
   def execute(command)
+    p command
     case command
     when "TurnLeft"
       a = @nanabo.servos[0].current_angle
@@ -52,7 +53,7 @@ class NanaboProxy
       @nanabo.vacuum.release
     when "LengthUp"
       a = @arm_length
-      b = [a+0.33, 30].min
+      b = [a+0.33, 36].min
       @arm_length = b
       @nanabo.set_default_arm(@arm_length, @elevation_angle.to_i)
     when "LengthDown"
@@ -84,6 +85,8 @@ class NanaboProxy
       a = @nanabo.pitch_angle
       b = [a+1, 90].min
       @nanabo.pitch_angle = b
+    when "InfoOut"
+      p "r: %02.02f, elv: %3d, M0: %3d"%[@arm_length, @elevation_angle.to_i, @nanabo.servos[0].current_angle]
     end
   end
   

@@ -47,7 +47,7 @@ ShiftController.prototype.state = function() {
 ShiftController.prototype.cursor_up = function() {
   switch(this.state()){
     case 0:
-      this.io.write("Unelevate\n");
+      this.io.write("Elevate\n");
       break;
     case 2:
       this.io.write("PitchDown\n");
@@ -57,7 +57,7 @@ ShiftController.prototype.cursor_up = function() {
 ShiftController.prototype.cursor_down = function() {
   switch(this.state()){
     case 0:
-      this.io.write("Elevate\n");
+      this.io.write("Unelevate\n");
       break;
     case 2:
       this.io.write("PitchUp\n");
@@ -107,6 +107,7 @@ var LengthUpCounter = new Counter(200, function(){ impl.stdin.write("LengthUp\n"
 var LengthDownCounter = new Counter(200, function(){ impl.stdin.write("LengthDown\n"); });
 var SpeedUpCounter = new Counter(250, function(){ impl.stdin.write("SpeedUp\n"); });
 var SpeedDownCounter = new Counter(250, function(){ impl.stdin.write("SpeedDown\n"); });
+var InfoCounter = new Counter(600000, function(){ impl.stdin.write("InfoOut\n"); });
 
 
 var Buttons = [
@@ -119,7 +120,7 @@ var Buttons = [
   LengthDownCounter,
   LengthUpCounter,
   null,
-  null,
+  InfoCounter,
   null,
   null
 ];

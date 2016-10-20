@@ -15,7 +15,7 @@ class Nanabo
   attr_accessor :speed, :same_time, :holds_pitch, :pitch_angle
   
   def initialize(serial, params = {})
-    @machine = ArduinoFirmata.connect serial
+    @machine = ArduinoFirmata.connect serial, bps: 57600
     if params[:prints_message]
       @machine.on :sysex do |command, data|
         str = ""
@@ -58,12 +58,19 @@ class Nanabo
   def move
     adjust_pitch if @holds_pitch
     count = move_count
+    # 先に途中角度の状態をすべて計算してから、一気にサーボを動かす
+    angles = Array.new(count+1 * @servos.size)
     (0..count).each do |i|
-      @servos.each do |servo|
-        ratio = i.to_f / count.to_f
-        servo.write_diff(ratio)
+      @servos.each_with_index do |servo, j|
+        angles[i*@servos.size+j] = servo.get_diff(i.to_f / count.to_f)
       end
-      sleep(0.01)
+    end
+    (0..count).each do |i|
+      @servos.each_with_index do |servo, j|
+        servo.write_angle(angles[i*@servos.size+j])
+      end
+      sleep(0.02)
+      #p [i, angles[i*@servos.size, @servos.size]]
     end
     @servos.each {|s| s.update_angle}
   end
@@ -105,11 +112,12 @@ class Nanabo
   end
   
   def move_count
+    base_count = 1000
     @speed = [@speed, 0].max
     if @same_time
-      count = 1000 / @speed 
+      count = base_count / @speed 
     else
-      count = (1000 * max_distance) / (@speed * 45)
+      count = (base_count * max_distance) / (@speed * 45)
     end
     return [count, 1].max
   end
