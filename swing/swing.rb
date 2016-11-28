@@ -15,16 +15,16 @@ end
 
 
 #e_angle = 17
-nanabo = Nanabo.new(ARGV[1])
+nanabo = Nanabo.new(ARGV[0])
 
-nanabo.offsets = [8, 20, 20, 0, 0, 0]
+nanabo.offsets = [8, 20, 20, 0, 0, 0, 0]
 #nanabo.same_time = true
 
 nanabo.speed = 10
 nanabo.move
 sleep(1)
 
-recipes = CSV.read("./move.csv")
+recipes = CSV.read(ARGV[1])
 
 recipes.each do |row|
   nanabo.target_angles = row[0..5].map(&:to_i)

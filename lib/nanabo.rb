@@ -2,96 +2,20 @@
 require 'rubygems'
 require 'arduino_firmata'
 
-SERVO_COUNT = 6
+require_relative 'CoordinateSystemProxy'
+require_relative 'Servo'
+require_relative 'Vacuum'
 
-# 座標系計算モジュール
-module CoodinateSystem
-  include Math
-  
-  # 極座標系の定数
-  ARM1_LENGTH = 19.50
-  ARM2_LENGTH = 12.50
-  SUB_LENGTH = 2.75
-  INCLUDED_ANGLE_BASE = 245
-  PEEK_ANGLE = 43
-  
-  # 円柱座標系の定数
-  HEIGHT_OFFSET = 13.6
-  PUMP_HEIGHT = 5.5
-  
-  def arm_length(m1, m2)
-    arm_length_impl(included_angle(m1, m2))
-  end
-  
-  def arm_length_impl(angle)
-    angle = radian(angle)
-    r1 = arm1_length(angle)
-    r2 = arm2_length(angle)
-    sqrt(r1**2 + r2**2 - 2*r1*r2*cos(angle))
-  end
-  
-  def included_angle(m1, m2)
-    INCLUDED_ANGLE_BASE - m1 - m2
-  end
-  
-  # アームの長さから夾角の大きさを求めるメソッド
-  # 逆関数化が著しく面倒なので、線形探索的に求めていくことにする
-  def included_angle_from_length(length)
-    # 下限は20°
-    return 20 if length < 11.0
-    (20..179).each do |angle|
-      # 長さを求めるf(x)は増加関数なので、f(x)が求める長さを超えた時点で角度を返す
-      return angle if arm_length_impl(angle) >= length
-    end
-  end
-  
-  def revision_angle(m1, m2)
-    revision_angle_impl(included_angle(m1, m2))
-  end
-  
-  def revision_angle_impl(angle)
-    length = arm_length_impl(angle)
-    over_peek = angle >= PEEK_ANGLE
-    angle = radian(angle)
-    alpha = arm1_length(angle) * sin(angle) / length
-    res = degree(asin(alpha))
-    res = over_peek ? res : 180.0 - res
-  end
-  
-  def servo2_angle(servo1_angle, inc_angle)
-    INCLUDED_ANGLE_BASE - servo1_angle - inc_angle
-  end
-  
-  def translate_system(x, y, is_ground_base)
-    y -= (HEIGHT_OFFSET - PUMP_HEIGHT) if is_ground_base
-    [sqrt(x**2 + y**2), degree(atan(y/x))]
-  end
-  
-  def arm1_length(angle)
-    return ARM1_LENGTH + SUB_LENGTH * cos(angle) / sin(angle)
-  end
-  
-  def arm2_length(angle)
-    return ARM2_LENGTH + SUB_LENGTH / sin(angle)
-  end
-  
-  def radian(deg)
-    deg.to_f * PI / 180.0
-  end
-  
-  def degree(rad)
-    rad * 180.0 / PI
-  end
-end
+SERVO_COUNT = 7
 
 # Nanaboコントロールクラス
 class Nanabo
-  include CoodinateSystem
+  include CoordinateSystemProxy
   attr_reader :servos, :vacuum
   attr_accessor :speed, :same_time, :holds_pitch, :pitch_angle
   
   def initialize(serial, params = {})
-    @machine = ArduinoFirmata.connect serial
+    @machine = ArduinoFirmata.connect serial, bps: 57600
     if params[:prints_message]
       @machine.on :sysex do |command, data|
         str = ""
@@ -99,14 +23,15 @@ class Nanabo
         p "send-string: " + str
       end
     end
-    @servos = (2..7).map {|pin| Servo.new(@machine, pin, 0)}
-    target_angles = [90, 145, 60, 90, 90, 90]
+    @servos = [2, 3, 4, 5, 6, 7, 8].map {|pin| Servo.new(@machine, pin, 0)}
+    target_angles = [90, 145, 60, 90, 90, 90, 0]
     @servos.each_with_index {|s,i| s.target_angle = target_angles[i]}
-    @speed = 50             # 動作スピード。下記@same_timeも影響する
+    @speed = 50          # 動作スピード。下記@same_timeも影響する
     @pitch_angle = 90    # バキュームのピッチ角
     @holds_pitch = true  # 真：姿勢が変わってもピッチ角を維持する
-    @same_time = false  # 真：すべての動作を同じ時間で処理する（＝移動量が大きいほど早くなる）
+    @same_time = false   # 真：すべての動作を同じ時間で処理する（＝移動量が大きいほど早くなる）
     @vacuum = Vacuum.new(@machine)
+    @forbidden_minus_z = true
   end
   
   def set_default_arm(length, elevation_angle)
@@ -119,27 +44,33 @@ class Nanabo
   
   # is_ground_base: ピッチ角が90°で設置する高さをy=0とおく
   def set_default_arm_xy(x, y, is_ground_base = true)
-    result = translate_system(x, y, is_ground_base)
-    p "length=%.2f, angle=%d"%[result[0], result[1].round.to_i]
+    result = translate_system(x, y, is_ground_base, @forbidden_minus_z)
     set_default_arm(result[0], result[1].round)
   end
   
   # is_ground_base: ピッチ角が90°で設置する高さをy=0とおく
   def set_default_arm_xyz(x, y, z, is_ground_base = true)
-    result = translate_system(x, y, false)
-    set_default_arm_xy(result[0], z, true)
-    @servos[0].target_angle = result[1].round.to_i
+    result = translate_system(y, x, false, false)
+    set_default_arm_xy(result[0], z, is_ground_base)
+    @servos[0].target_angle = result[1].round.to_i + 90
   end
   
   def move
     adjust_pitch if @holds_pitch
     count = move_count
+    # 先に途中角度の状態をすべて計算してから、一気にサーボを動かす
+    angles = Array.new(count+1 * @servos.size)
     (0..count).each do |i|
-      @servos.each do |servo|
-        ratio = i.to_f / count.to_f
-        servo.write_diff(ratio)
+      @servos.each_with_index do |servo, j|
+        angles[i*@servos.size+j] = servo.get_diff(i.to_f / count.to_f)
       end
-      sleep(0.01)
+    end
+    (0..count).each do |i|
+      @servos.each_with_index do |servo, j|
+        servo.write_angle(angles[i*@servos.size+j])
+      end
+      sleep(0.02)
+      #p [i, angles[i*@servos.size, @servos.size]]
     end
     @servos.each {|s| s.update_angle}
   end
@@ -157,11 +88,18 @@ class Nanabo
   end
   
   def offsets=(array)
-    @servos.map.with_index {|s,i| s.offset = array[i]}
+    @servos.map.with_index do |s,i|
+      o = i < array.size ? array[i] : 0
+      s.offset = o
+    end
   end
   
   def signs
     @servos.map {|s| s.sign}
+  end
+  
+  def arm_included_angle
+    included_angle(@servos[1].current_angle, @servos[2].current_angle)
   end
   
   private
@@ -177,91 +115,14 @@ class Nanabo
   end
   
   def move_count
+    base_count = 1000
     @speed = [@speed, 0].max
     if @same_time
-      count = 1000 / @speed 
+      count = base_count / @speed 
     else
-      count = (1000 * max_distance) / (@speed * 45)
+      count = (base_count * max_distance) / (@speed * 45)
     end
     return [count, 1].max
   end
 end
 
-# サーボクラス
-class Servo
-  attr_reader :current_angle
-  attr_accessor :target_angle, :offset
-
-  def initialize(machine, pin, target)
-    @machine = machine
-    @pin = pin
-    @offset = 0
-    @current_angle = to_angle(sign)
-    @target_angle = target
-  end
-  
-  def distance
-    (@target_angle + @offset) - @current_angle
-  end
-  
-  def write_diff(ratio = 1.0)
-    angle = @current_angle + (distance.to_f * ratio.to_f).round
-    @machine.servo_write @pin, angle
-  end
-  
-  def update_angle
-    @current_angle = (@target_angle + @offset)
-  end
-  
-  def sign
-    MedianFilter.med(11){@machine.analog_read(analog_pin)}
-  end
-  
-  def to_angle(val)
-    return val * 180 / 1024
-  end
-  
-  private
-  def analog_pin
-    @pin - 2
-  end
-end
-
-# バキュームクラス
-class Vacuum
-  VALVE_PIN = 10
-  PUMP_PIN = 11
-  
-  def initialize(machine)
-    @machine = machine
-    @machine.digital_write VALVE_PIN, false
-    @machine.digital_write PUMP_PIN, false
-    @is_sucking = false
-  end
-  
-  def suck
-    @machine.digital_write VALVE_PIN, false
-    @machine.digital_write PUMP_PIN, true
-    @is_sucking = true
-  end
-  
-  def release
-    @machine.digital_write VALVE_PIN, true
-    @machine.digital_write PUMP_PIN, false
-    @is_sucking = false
-  end
-  
-  def sucking?
-    return @is_sucking
-  end
-end
-
-# 中間値取得モジュール
-module MedianFilter
-  def self.med(count, &proc)
-    array = (0..count).map do |i|
-      proc.call
-    end
-    array.sort[(count-1)/2]
-  end
-end

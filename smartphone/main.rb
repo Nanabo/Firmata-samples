@@ -5,11 +5,10 @@ require 'rubygems'
 require 'arduino_firmata'
 require_relative '../lib/nanabo'
 
-nanabo = Nanabo.new(ARGV[0])
+nanabo = Nanabo.new(ARGV[1])
 
-nanabo.offsets = [8, 0, 0, 0, 0, 3, 0]
+nanabo.offsets = [8, 0, 0, 0, 0, 3]
 
-nanabo.speed = 80
 nanabo.move
 sleep(1)
 
@@ -28,7 +27,7 @@ loop do
   y = gets.chomp.to_f
   puts "z=?"
   z = gets.chomp.to_f
-  nanabo.set_default_arm_xyz(x, y, z)
+  nanabo.set_default_arm_xy(x, y, z)
   nanabo.move
   
   angle0 = nanabo.servos[0].current_angle
