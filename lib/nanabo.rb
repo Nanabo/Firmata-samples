@@ -6,7 +6,7 @@ require_relative 'CoordinateSystemProxy'
 require_relative 'Servo'
 require_relative 'Vacuum'
 
-SERVO_COUNT = 6
+SERVO_COUNT = 7
 
 # Nanaboコントロールクラス
 class Nanabo
@@ -23,8 +23,8 @@ class Nanabo
         p "send-string: " + str
       end
     end
-    @servos = (2..7).map {|pin| Servo.new(@machine, pin, 0)}
-    target_angles = [90, 145, 60, 90, 90, 90]
+    @servos = [2, 3, 4, 5, 6, 7, 8].map {|pin| Servo.new(@machine, pin, 0)}
+    target_angles = [90, 145, 60, 90, 90, 90, 0]
     @servos.each_with_index {|s,i| s.target_angle = target_angles[i]}
     @speed = 50          # 動作スピード。下記@same_timeも影響する
     @pitch_angle = 90    # バキュームのピッチ角
