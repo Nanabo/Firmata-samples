@@ -2,7 +2,7 @@ var gamepad = require('gamepad');
 var childProcess = require('child_process');
 
 // rubyのnanabo APIを子プロセスとして呼び出す
-var impl = childProcess.spawn('ruby', ['impl.rb'], { stdio: ['pipe', 'inherit', 'inherit']});
+var impl = childProcess.spawn('ruby', ['impl.rb', process.argv[2]], { stdio: ['pipe', 'inherit', 'inherit']});
 
 // 各ボタンのバッファクラス
 function Counter(interval, callback) {
@@ -49,6 +49,9 @@ ShiftController.prototype.cursor_up = function() {
     case 0:
       this.io.write("Elevate\n");
       break;
+    case 1:
+      this.io.write("Grip\n");
+      break;
     case 2:
       this.io.write("PitchDown\n");
       break;
@@ -58,6 +61,9 @@ ShiftController.prototype.cursor_down = function() {
   switch(this.state()){
     case 0:
       this.io.write("Unelevate\n");
+      break;
+    case 1:
+      this.io.write("Ungrip\n");
       break;
     case 2:
       this.io.write("PitchUp\n");

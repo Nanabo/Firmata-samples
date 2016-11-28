@@ -7,9 +7,9 @@ e_angle = 17
 roffset = 0
 loffset = 3
 
-nanabo = Nanabo.new(ARGV[1])
+nanabo = Nanabo.new(ARGV[0])
 
-nanabo.offsets = [8, 0, 0, 0, 0, 3]
+nanabo.offsets = [8, 0, 0, 0, 0, 3, 0]
 #nanabo.same_time = true
 
 nanabo.move

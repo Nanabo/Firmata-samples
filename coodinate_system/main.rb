@@ -5,7 +5,7 @@ require 'rubygems'
 require 'arduino_firmata'
 require_relative '../lib/nanabo'
 
-nanabo = Nanabo.new(ARGV[1])
+nanabo = Nanabo.new(ARGV[0])
 
 nanabo.offsets = [8, 0, 0, 0, 0, 3]
 

@@ -8,8 +8,8 @@ require_relative '../lib/nanabo'
 # 親プロセスからコマンドを読み取り、そのコマンドに応じた処理をnanaboにさせるプロキシクラス
 class NanaboProxy
   def initialize
-    @nanabo = Nanabo.new("COM7")
-    @nanabo.offsets = [0, 0, 0, 0, 0, 0]
+    @nanabo = Nanabo.new(ARGV[0])
+    @nanabo.offsets = [0, 0, 0, 0, 0, 0, 0]
     @arm_length = 20.0
     @elevation_angle = 30.0 
   end
@@ -79,14 +79,22 @@ class NanaboProxy
       @nanabo.servos[5].target_angle = b
     when "PitchUp"
       a = @nanabo.pitch_angle
-      b = [a-1, -90].max
+      b = [a-2, -90].max
       @nanabo.pitch_angle = b
     when "PitchDown"
       a = @nanabo.pitch_angle
-      b = [a+1, 90].min
+      b = [a+2, 90].min
       @nanabo.pitch_angle = b
+    when "Grip"
+      a = @nanabo.servos[6].current_angle
+      b = [a+2, 180].min
+      @nanabo.servos[6].target_angle = b
+    when "Ungrip"
+      a = @nanabo.servos[6].current_angle
+      b = [a-2, 0].max
+      @nanabo.servos[6].target_angle = b
     when "InfoOut"
-      p "r: %02.02f, elv: %3d, M0: %3d"%[@arm_length, @elevation_angle.to_i, @nanabo.servos[0].current_angle]
+      p "r: %02.02f, elv: %3d, M0: %3d: [%3d, %3d, %3d, %3d, %3d, %3d, %3d]"%[@arm_length, @elevation_angle.to_i, @nanabo.servos[0].current_angle, @nanabo.current_angles].flatten
     end
   end
   
