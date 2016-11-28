@@ -17,7 +17,7 @@ end
 #e_angle = 17
 nanabo = Nanabo.new(ARGV[0])
 
-nanabo.offsets = [8, 20, 20, 0, 0, 0]
+nanabo.offsets = [8, 20, 20, 0, 0, 0, 0]
 #nanabo.same_time = true
 
 nanabo.speed = 10

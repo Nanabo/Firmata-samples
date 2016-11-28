@@ -3,9 +3,9 @@ require 'rubygems'
 require 'arduino_firmata'
 require_relative '../lib/nanabo'
 
-nanabo = Nanabo.new("COM7")
+nanabo = Nanabo.new(ARGV[0])
 
-nanabo.offsets = [0, 0, 0, 0, 0, 0]
+nanabo.offsets = [0, 0, 0, 0, 0, 0, 0]
 #nanabo.same_time = true
 
 nanabo.move

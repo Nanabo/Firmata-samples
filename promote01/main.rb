@@ -7,9 +7,9 @@ e_angle = 17
 roffset = 0
 loffset = 3
 
-nanabo = Nanabo.new("COM7")
+nanabo = Nanabo.new(ARGV[0])
 
-nanabo.offsets = [0, 0, 0, 0, 0, 0]
+nanabo.offsets = [0, 0, 0, 0, 0, 0, 0]
 nanabo.same_time = true
 
 nanabo.speed = 60

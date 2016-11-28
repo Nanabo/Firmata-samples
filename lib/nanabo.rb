@@ -88,7 +88,10 @@ class Nanabo
   end
   
   def offsets=(array)
-    @servos.map.with_index {|s,i| s.offset = array[i]}
+    @servos.map.with_index do |s,i|
+      o = i < array.size ? array[i] : 0
+      s.offset = o
+    end
   end
   
   def signs
